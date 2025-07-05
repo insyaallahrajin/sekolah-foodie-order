@@ -1,4 +1,3 @@
-
 import { useEffect, useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
@@ -14,7 +13,6 @@ interface Child {
   id: string;
   name: string;
   class: string;
-  allergies: string[] | null;
   parent_id: string | null;
   created_at: string;
   updated_at: string | null;

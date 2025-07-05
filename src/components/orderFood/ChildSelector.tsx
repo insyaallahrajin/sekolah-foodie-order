@@ -7,7 +7,7 @@ import { User } from 'lucide-react';
 interface Child {
   id: string;
   name: string;
-  class_name: string;
+  class: string;
 }
 
 interface ChildSelectorProps {
@@ -44,7 +44,7 @@ const ChildSelector = ({ children, selectedChild, onChildSelect }: ChildSelector
             <SelectContent>
               {children.map((child) => (
                 <SelectItem key={child.id} value={child.id}>
-                  {child.name} - Kelas {child.class_name}
+                  {child.name} - Kelas {child.class}
                 </SelectItem>
               ))}
             </SelectContent>

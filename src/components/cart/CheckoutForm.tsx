@@ -6,7 +6,7 @@ import { Label } from '@/components/ui/label';
 interface Child {
   id: string;
   name: string;
-  class_name: string;
+  class: string;
 }
 
 interface CheckoutFormProps {
@@ -30,7 +30,7 @@ const CheckoutForm = ({ children, selectedChildId, onChildSelect, notes, onNotes
           <SelectContent>
             {children.map((child) => (
               <SelectItem key={child.id} value={child.id}>
-                {child.name} - Kelas {child.class_name}
+                {child.name} - Kelas {child.class}
               </SelectItem>
             ))}
           </SelectContent>
