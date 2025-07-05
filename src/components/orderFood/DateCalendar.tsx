@@ -3,17 +3,7 @@ import { Calendar } from '@/components/ui/calendar';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { CalendarIcon } from 'lucide-react';
 import { id as idLocale } from 'date-fns/locale';
-import { isWeekend } from 'date-fns';
-
-interface OrderSchedule {
-  date: string;
-  is_blocked: boolean;
-  cutoff_time: string;
-  cutoff_date: string | null;
-  max_orders: number | null;
-  current_orders: number;
-  notes: string | null;
-}
+import { OrderSchedule } from '@/types/orderSchedule';
 
 interface DateCalendarProps {
   selectedDate: Date | undefined;
