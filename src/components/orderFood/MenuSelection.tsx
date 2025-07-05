@@ -5,22 +5,7 @@ import { Badge } from '@/components/ui/badge';
 import { Clock, AlertTriangle, Plus, Minus } from 'lucide-react';
 import { format } from 'date-fns';
 import { id as idLocale } from 'date-fns/locale';
-
-interface DailyMenu {
-  id: string;
-  date: string;
-  food_item_id: string;
-  price: number;
-  is_available: boolean;
-  max_quantity: number | null;
-  current_quantity: number;
-  food_items: {
-    name: string;
-    description: string;
-    image_url: string;
-    category: string;
-  };
-}
+import { DailyMenu } from '@/types/dailyMenu';
 
 interface MenuSelectionProps {
   selectedDate: Date;
@@ -66,16 +51,16 @@ const MenuSelection = ({
               return (
                 <div key={menu.id} className="flex items-center space-x-4 p-4 border rounded-lg hover:bg-gray-50">
                   <img
-                    src={menu.food_items.image_url}
-                    alt={menu.food_items.name}
+                    src={menu.food_items?.image_url || '/placeholder.svg'}
+                    alt={menu.food_items?.name || 'Menu item'}
                     className="w-16 h-16 object-cover rounded"
                   />
                   <div className="flex-1">
-                    <h3 className="font-medium">{menu.food_items.name}</h3>
-                    <p className="text-sm text-gray-600">{menu.food_items.description}</p>
+                    <h3 className="font-medium">{menu.food_items?.name || 'Unknown Item'}</h3>
+                    <p className="text-sm text-gray-600">{menu.food_items?.description || 'No description'}</p>
                     <p className="font-semibold text-orange-600">{formatPrice(menu.price)}</p>
                     <Badge variant="outline" className="text-xs">
-                      {menu.food_items.category}
+                      {menu.food_items?.category || 'unknown'}
                     </Badge>
                   </div>
                   <div className="flex items-center space-x-2">
