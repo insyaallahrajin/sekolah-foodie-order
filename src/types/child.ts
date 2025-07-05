@@ -4,7 +4,8 @@ export interface Child {
   name: string;
   class: string;
   parent_id?: string;
-  allergies?: string[];
+  school_year?: string;
+  is_active?: boolean;
   created_at?: string;
   updated_at?: string;
 }

@@ -4,56 +4,51 @@ import { format, addDays } from 'date-fns';
 
 export const populateDailyMenus = async () => {
   try {
-    // First, get all available food items
+    // Get all active food items
     const { data: foodItems, error: foodError } = await supabase
       .from('food_items')
       .select('*')
-      .eq('is_available', true);
+      .eq('is_active', true);
 
     if (foodError) throw foodError;
 
     if (!foodItems || foodItems.length === 0) {
-      console.log('No food items found');
-      return;
+      throw new Error('No active food items found');
     }
 
-    // Create daily menus for the next 7 days
-    const promises = [];
-    for (let i = 0; i < 7; i++) {
-      const date = addDays(new Date(), i);
-      const dateStr = format(date, 'yyyy-MM-dd');
+    // Generate dates for the next 7 days
+    const dates = [];
+    for (let i = 1; i <= 7; i++) {
+      dates.push(format(addDays(new Date(), i), 'yyyy-MM-dd'));
+    }
 
-      // Check if daily menus already exist for this date
-      const { data: existingMenus } = await supabase
-        .from('daily_menus')
-        .select('id')
-        .eq('date', dateStr);
-
-      if (existingMenus && existingMenus.length > 0) {
-        console.log(`Daily menus already exist for ${dateStr}`);
-        continue;
+    // Create daily menu entries
+    const dailyMenus = [];
+    for (const date of dates) {
+      // Add all food items for each date
+      for (const item of foodItems) {
+        dailyMenus.push({
+          menu_date: date,
+          food_item_id: item.id,
+          price: item.base_price,
+          is_available: true,
+          available_quantity: 50,
+          remaining_quantity: 50
+        });
       }
-
-      // Create daily menus for all food items
-      const dailyMenuItems = foodItems.map(item => ({
-        date: dateStr,
-        food_item_id: item.id,
-        price: item.price,
-        is_available: true,
-        max_quantity: 50,
-        current_quantity: 0
-      }));
-
-      promises.push(
-        supabase
-          .from('daily_menus')
-          .insert(dailyMenuItems)
-      );
     }
 
-    await Promise.all(promises);
-    console.log('Daily menus populated successfully');
+    // Insert daily menus
+    const { error: insertError } = await supabase
+      .from('daily_menus')
+      .insert(dailyMenus);
+
+    if (insertError) throw insertError;
+
+    console.log(`Successfully created ${dailyMenus.length} daily menu items`);
+    
   } catch (error) {
     console.error('Error populating daily menus:', error);
+    throw error;
   }
 };

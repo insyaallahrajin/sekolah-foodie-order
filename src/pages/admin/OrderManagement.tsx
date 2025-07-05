@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
@@ -62,7 +63,7 @@ const OrderManagement = () => {
     fetchOrders();
   }, []);
 
-  const updateOrderStatus = async (orderId: string, newStatus: string) => {
+  const updateOrderStatus = async (orderId: string, newStatus: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled') => {
     try {
       setLoading(true);
       const { error } = await supabase
@@ -105,10 +106,10 @@ const OrderManagement = () => {
             <SelectContent>
               <SelectItem value="all">Semua</SelectItem>
               <SelectItem value="pending">Pending</SelectItem>
-              <SelectItem value="paid">Paid</SelectItem>
+              <SelectItem value="confirmed">Confirmed</SelectItem>
               <SelectItem value="preparing">Preparing</SelectItem>
               <SelectItem value="ready">Ready</SelectItem>
-              <SelectItem value="completed">Completed</SelectItem>
+              <SelectItem value="delivered">Delivered</SelectItem>
               <SelectItem value="cancelled">Cancelled</SelectItem>
             </SelectContent>
           </Select>
@@ -161,16 +162,21 @@ const OrderManagement = () => {
                       {order.total_amount}
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
-                      <Select value={order.status} onValueChange={(value) => updateOrderStatus(order.id, value)}>
+                      <Select 
+                        value={order.status || 'pending'} 
+                        onValueChange={(value: 'pending' | 'confirmed' | 'preparing' | 'ready' | 'delivered' | 'cancelled') => 
+                          updateOrderStatus(order.id, value)
+                        }
+                      >
                         <SelectTrigger>
                           <SelectValue placeholder={order.status} />
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="pending">Pending</SelectItem>
-                          <SelectItem value="paid">Paid</SelectItem>
+                          <SelectItem value="confirmed">Confirmed</SelectItem>
                           <SelectItem value="preparing">Preparing</SelectItem>
                           <SelectItem value="ready">Ready</SelectItem>
-                          <SelectItem value="completed">Completed</SelectItem>
+                          <SelectItem value="delivered">Delivered</SelectItem>
                           <SelectItem value="cancelled">Cancelled</SelectItem>
                         </SelectContent>
                       </Select>
