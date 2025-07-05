@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { CalendarIcon } from 'lucide-react';
@@ -161,34 +160,30 @@ const Index = () => {
           sum + (item.price * item.quantity), 0
         );
 
-        // Generate unique order ID
-        const midtransOrderId = `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
-
-        // Create order
+        // Create order using parent_id instead of user_id
         const { data: order, error: orderError } = await supabase
           .from('orders')
           .insert({
-            user_id: user?.id,
+            parent_id: user?.id,
             child_id: orderGroup.child_id,
-            child_name: selectedChildData?.name,
-            child_class: selectedChildData?.class_name,
             total_amount: totalAmount,
             order_date: orderGroup.date,
-            midtrans_order_id: midtransOrderId,
+            delivery_date: orderGroup.date, // Same as order date for simplicity
             status: 'pending',
-            payment_status: 'pending'
+            payment_method: 'online'
           })
           .select()
           .single();
 
         if (orderError) throw orderError;
 
-        // Create order items using the correct food_item_id
+        // Create order items using the correct structure
         const orderItems = orderGroup.items.map((item: CartItem) => ({
           order_id: order.id,
-          food_item_id: item.food_item_id,
+          daily_menu_id: item.id, // This should be the daily_menu_id from cart
           quantity: item.quantity,
-          price: item.price
+          unit_price: item.price,
+          subtotal: item.price * item.quantity
         }));
 
         const { error: itemsError } = await supabase

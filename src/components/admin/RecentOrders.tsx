@@ -70,6 +70,7 @@ export const RecentOrders = () => {
             quantity,
             unit_price,
             subtotal,
+            daily_menu_id,
             daily_menus (
               food_items (
                 name,

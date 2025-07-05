@@ -1,5 +1,5 @@
 
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/components/ui/use-toast';
@@ -59,7 +59,7 @@ export const useCartOperations = () => {
       const deliveryDate = new Date();
       deliveryDate.setDate(deliveryDate.getDate() + 1);
 
-      // Create order
+      // Create order using parent_id instead of user_id
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
@@ -77,10 +77,10 @@ export const useCartOperations = () => {
 
       if (orderError) throw orderError;
 
-      // Create order items
+      // Create order items with proper structure
       const orderItems = items.map(item => ({
         order_id: order.id,
-        daily_menu_id: item.id, // Assuming CartItem has daily menu ID
+        daily_menu_id: item.id,
         quantity: item.quantity,
         unit_price: item.price,
         subtotal: item.price * item.quantity

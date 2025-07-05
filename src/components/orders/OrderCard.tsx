@@ -6,9 +6,7 @@ import { User } from 'lucide-react';
 import { Order } from '@/types/order';
 import { 
   getStatusColor, 
-  getPaymentStatusColor, 
-  getStatusText, 
-  getPaymentStatusText,
+  getStatusText,
   formatPrice,
   formatDate 
 } from '@/utils/orderUtils';
@@ -25,18 +23,15 @@ export const OrderCard = ({ order, onRetryPayment }: OrderCardProps) => (
         <div>
           <CardTitle className="text-lg flex items-center">
             <User className="h-5 w-5 mr-2 text-orange-600" />
-            {order.child_name}
+            {order.children?.name || 'Unknown'}
           </CardTitle>
           <CardDescription>
-            Kelas {order.child_class} • {formatDate(order.created_at)}
+            Kelas {order.children?.class || 'Unknown'} • {formatDate(order.created_at)}
           </CardDescription>
         </div>
         <div className="text-right space-y-1">
           <Badge className={getStatusColor(order.status)}>
             {getStatusText(order.status)}
-          </Badge>
-          <Badge className={getPaymentStatusColor(order.payment_status)}>
-            {getPaymentStatusText(order.payment_status)}
           </Badge>
         </div>
       </div>
@@ -48,14 +43,14 @@ export const OrderCard = ({ order, onRetryPayment }: OrderCardProps) => (
           {order.order_items.map((item) => (
             <div key={item.id} className="flex items-center space-x-3 p-2 bg-gray-50 rounded">
               <img
-                src={item.food_items.image_url}
-                alt={item.food_items.name}
+                src={item.daily_menus?.food_items?.image_url || '/placeholder.svg'}
+                alt={item.daily_menus?.food_items?.name || 'Food item'}
                 className="w-12 h-12 object-cover rounded"
               />
               <div className="flex-1">
-                <p className="font-medium text-sm">{item.food_items.name}</p>
+                <p className="font-medium text-sm">{item.daily_menus?.food_items?.name || 'Unknown item'}</p>
                 <p className="text-xs text-gray-600">
-                  {item.quantity}x • {formatPrice(item.price)}
+                  {item.quantity}x • {formatPrice(item.unit_price)}
                 </p>
               </div>
             </div>
@@ -63,10 +58,10 @@ export const OrderCard = ({ order, onRetryPayment }: OrderCardProps) => (
         </div>
 
         {/* Notes */}
-        {order.notes && (
+        {order.special_notes && (
           <div className="p-2 bg-blue-50 rounded">
             <p className="text-sm text-blue-800">
-              <strong>Catatan:</strong> {order.notes}
+              <strong>Catatan:</strong> {order.special_notes}
             </p>
           </div>
         )}
@@ -79,8 +74,8 @@ export const OrderCard = ({ order, onRetryPayment }: OrderCardProps) => (
           </span>
         </div>
 
-        {/* Payment Button */}
-        {order.payment_status === 'pending' && (
+        {/* Payment Button - Show for pending status */}
+        {order.status === 'pending' && (
           <Button 
             className="w-full bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600"
             onClick={() => onRetryPayment(order)}

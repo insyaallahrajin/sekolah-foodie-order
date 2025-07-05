@@ -13,10 +13,11 @@ import { toast } from '@/components/ui/use-toast';
 interface Child {
   id: string;
   name: string;
-  class_name: string;
-  school_year: string | null;
-  is_active: boolean;
+  class: string;
+  allergies: string[] | null;
+  parent_id: string | null;
   created_at: string;
+  updated_at: string | null;
 }
 
 const Children = () => {
@@ -59,7 +60,6 @@ const Children = () => {
     const formData = new FormData(e.currentTarget);
     const name = formData.get('name') as string;
     const className = formData.get('className') as string;
-    const schoolYear = formData.get('schoolYear') as string;
 
     try {
       if (editingChild) {
@@ -67,8 +67,7 @@ const Children = () => {
           .from('children')
           .update({
             name,
-            class_name: className,
-            school_year: schoolYear || null,
+            class: className,
           })
           .eq('id', editingChild.id);
 
@@ -83,8 +82,7 @@ const Children = () => {
           .insert({
             parent_id: user?.id,
             name,
-            class_name: className,
-            school_year: schoolYear || null,
+            class: className,
           });
 
         if (error) throw error;
@@ -201,18 +199,8 @@ const Children = () => {
                   id="className"
                   name="className"
                   required
-                  defaultValue={editingChild?.class_name || ''}
+                  defaultValue={editingChild?.class || ''}
                   placeholder="Contoh: 1A, 2B, dll"
-                />
-              </div>
-              
-              <div className="space-y-2">
-                <Label htmlFor="schoolYear">Tahun Ajaran (Opsional)</Label>
-                <Input
-                  id="schoolYear"
-                  name="schoolYear"
-                  defaultValue={editingChild?.school_year || ''}
-                  placeholder="Contoh: 2024/2025"
                 />
               </div>
               
@@ -272,8 +260,7 @@ const Children = () => {
                   </div>
                 </CardTitle>
                 <CardDescription>
-                  Kelas {child.class_name}
-                  {child.school_year && ` • ${child.school_year}`}
+                  Kelas {child.class}
                 </CardDescription>
               </CardHeader>
               <CardContent>

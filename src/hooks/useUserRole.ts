@@ -21,11 +21,11 @@ export const useUserRole = () => {
     try {
       console.log('Fetching user role for:', user?.id);
       
-      // First try to get from user_roles table
+      // Get role from profiles table
       const { data, error } = await supabase
-        .from('user_roles')
+        .from('profiles')
         .select('role')
-        .eq('user_id', user?.id)
+        .eq('id', user?.id)
         .single();
 
       if (error) {
