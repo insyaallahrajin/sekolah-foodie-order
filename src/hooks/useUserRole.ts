@@ -19,17 +19,38 @@ export const useUserRole = () => {
 
   const fetchUserRole = async () => {
     try {
+      console.log('Fetching user role for:', user?.id);
+      
+      // First try to get from user_roles table
       const { data, error } = await supabase
         .from('user_roles')
         .select('role')
         .eq('user_id', user?.id)
         .single();
 
-      if (error) throw error;
-      setRole(data?.role || 'parent');
+      if (error) {
+        console.error('Error fetching user role:', error);
+        
+        // If user is admin@admin.com, set as admin by default
+        if (user?.email === 'admin@admin.com') {
+          console.log('Setting admin role for admin@admin.com');
+          setRole('admin');
+        } else {
+          setRole('parent'); // Default to parent if error
+        }
+      } else {
+        console.log('User role fetched successfully:', data?.role);
+        setRole(data?.role || 'parent');
+      }
     } catch (error) {
-      console.error('Error fetching user role:', error);
-      setRole('parent'); // Default to parent if error
+      console.error('Exception while fetching user role:', error);
+      
+      // Fallback: check email for admin
+      if (user?.email === 'admin@admin.com') {
+        setRole('admin');
+      } else {
+        setRole('parent');
+      }
     } finally {
       setLoading(false);
     }
