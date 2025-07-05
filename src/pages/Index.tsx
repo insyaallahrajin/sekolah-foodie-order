@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent } from '@/components/ui/card';
 import { CalendarIcon } from 'lucide-react';
@@ -13,6 +14,9 @@ import DateCalendar from '@/components/orderFood/DateCalendar';
 import OrderInfo from '@/components/orderFood/OrderInfo';
 import MenuSelection from '@/components/orderFood/MenuSelection';
 import FloatingCartButton from '@/components/orderFood/FloatingCartButton';
+import { Child } from '@/types/child';
+import { OrderSchedule } from '@/types/orderSchedule';
+import { DailyMenu } from '@/types/dailyMenu';
 
 interface CartItem {
   id: string;
@@ -49,7 +53,7 @@ const Index = () => {
     }).format(price);
   };
 
-  const addToCart = (menu: any) => {
+  const addToCart = (menu: DailyMenu) => {
     if (!selectedChild || !selectedDate) {
       toast({
         title: "Pilih anak dan tanggal",
@@ -83,20 +87,20 @@ const Index = () => {
     } else {
       const newItem: CartItem = {
         id: cartItemId,
-        name: menu.food_items.name,
+        name: menu.food_items?.name || 'Unknown Item',
         price: menu.price,
         quantity: 1,
         date: dateStr,
         child_id: selectedChild,
-        food_item_id: menu.food_item_id,
-        image_url: menu.food_items.image_url
+        food_item_id: menu.food_item_id || '',
+        image_url: menu.food_items?.image_url || undefined
       };
       setCart([...cart, newItem]);
     }
 
     toast({
       title: "Berhasil ditambahkan",
-      description: `${menu.food_items.name} ditambahkan ke keranjang`,
+      description: `${menu.food_items?.name || 'Item'} ditambahkan ke keranjang`,
     });
   };
 
@@ -112,7 +116,7 @@ const Index = () => {
     }
   };
 
-  const getCartQuantity = (menu: any) => {
+  const getCartQuantity = (menu: DailyMenu) => {
     if (!selectedChild || !selectedDate) return 0;
     
     const dateStr = format(selectedDate, 'yyyy-MM-dd');
