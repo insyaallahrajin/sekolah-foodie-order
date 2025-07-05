@@ -4,7 +4,48 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Badge } from '@/components/ui/badge';
 import { supabase } from '@/integrations/supabase/client';
 import { Order } from '@/types/order';
-import { getStatusColor, getStatusText, formatPrice, formatDate } from '@/utils/orderUtils';
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'pending': return 'bg-yellow-100 text-yellow-800';
+    case 'paid': return 'bg-green-100 text-green-800';
+    case 'preparing': return 'bg-blue-100 text-blue-800';
+    case 'ready': return 'bg-purple-100 text-purple-800';
+    case 'completed': return 'bg-green-100 text-green-800';
+    case 'cancelled': return 'bg-red-100 text-red-800';
+    default: return 'bg-gray-100 text-gray-800';
+  }
+};
+
+const getStatusText = (status: string) => {
+  switch (status) {
+    case 'pending': return 'Menunggu';
+    case 'paid': return 'Dibayar';
+    case 'preparing': return 'Disiapkan';
+    case 'ready': return 'Siap';
+    case 'completed': return 'Selesai';
+    case 'cancelled': return 'Dibatalkan';
+    default: return status;
+  }
+};
+
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+  }).format(price);
+};
+
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('id-ID', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
 
 export const RecentOrders = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -20,13 +61,20 @@ export const RecentOrders = () => {
         .from('orders')
         .select(`
           *,
+          children (
+            name,
+            class
+          ),
           order_items (
             id,
             quantity,
-            price,
-            food_items (
-              name,
-              image_url
+            unit_price,
+            subtotal,
+            daily_menus (
+              food_items (
+                name,
+                image_url
+              )
             )
           )
         `)
@@ -70,13 +118,13 @@ export const RecentOrders = () => {
           {orders.map((order) => (
             <div key={order.id} className="flex items-center justify-between p-3 border rounded-lg">
               <div className="space-y-1">
-                <p className="font-medium">{order.child_name}</p>
-                <p className="text-sm text-gray-500">{order.child_class}</p>
+                <p className="font-medium">{order.children?.name || 'Unknown'}</p>
+                <p className="text-sm text-gray-500">{order.children?.class || 'Unknown'}</p>
                 <p className="text-sm text-gray-500">{formatDate(order.created_at)}</p>
               </div>
               <div className="text-right space-y-1">
-                <Badge className={getStatusColor(order.status)}>
-                  {getStatusText(order.status)}
+                <Badge className={getStatusColor(order.status || 'pending')}>
+                  {getStatusText(order.status || 'pending')}
                 </Badge>
                 <p className="font-medium">{formatPrice(order.total_amount)}</p>
               </div>

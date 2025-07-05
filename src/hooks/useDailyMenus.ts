@@ -6,12 +6,12 @@ import { format } from 'date-fns';
 
 interface DailyMenu {
   id: string;
-  date: string;
+  menu_date: string;
   food_item_id: string;
   price: number;
   is_available: boolean;
-  max_quantity: number | null;
-  current_quantity: number;
+  available_quantity: number | null;
+  remaining_quantity: number;
   food_items: {
     name: string;
     description: string;
@@ -37,7 +37,7 @@ export const useDailyMenus = () => {
             category
           )
         `)
-        .eq('date', dateStr)
+        .eq('menu_date', dateStr)
         .eq('is_available', true);
 
       if (error) throw error;

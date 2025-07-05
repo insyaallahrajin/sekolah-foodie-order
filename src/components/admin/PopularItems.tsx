@@ -23,9 +23,12 @@ export const PopularItems = () => {
         .from('order_items')
         .select(`
           quantity,
-          price,
-          food_items (
-            name
+          unit_price,
+          subtotal,
+          daily_menus (
+            food_items (
+              name
+            )
           )
         `);
 
@@ -35,11 +38,11 @@ export const PopularItems = () => {
       const itemMap = new Map<string, { quantity: number; revenue: number }>();
       
       data?.forEach((item) => {
-        const name = item.food_items?.name || 'Unknown';
+        const name = item.daily_menus?.food_items?.name || 'Unknown';
         const existing = itemMap.get(name) || { quantity: 0, revenue: 0 };
         itemMap.set(name, {
           quantity: existing.quantity + item.quantity,
-          revenue: existing.revenue + (item.quantity * item.price)
+          revenue: existing.revenue + item.subtotal
         });
       });
 

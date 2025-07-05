@@ -8,11 +8,51 @@ import { Input } from '@/components/ui/input';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
 import { Order } from '@/types/order';
-import { getStatusColor, getStatusText, getPaymentStatusColor, getPaymentStatusText, formatPrice, formatDate } from '@/utils/orderUtils';
 import { Search, Filter } from 'lucide-react';
 
-type OrderStatus = "pending" | "confirmed" | "preparing" | "ready" | "delivered" | "cancelled";
-type PaymentStatus = "pending" | "paid" | "failed" | "refunded";
+type OrderStatus = "pending" | "paid" | "preparing" | "ready" | "completed" | "cancelled";
+
+const getStatusColor = (status: string) => {
+  switch (status) {
+    case 'pending': return 'bg-yellow-100 text-yellow-800';
+    case 'paid': return 'bg-green-100 text-green-800';
+    case 'preparing': return 'bg-blue-100 text-blue-800';
+    case 'ready': return 'bg-purple-100 text-purple-800';
+    case 'completed': return 'bg-green-100 text-green-800';
+    case 'cancelled': return 'bg-red-100 text-red-800';
+    default: return 'bg-gray-100 text-gray-800';
+  }
+};
+
+const getStatusText = (status: string) => {
+  switch (status) {
+    case 'pending': return 'Menunggu';
+    case 'paid': return 'Dibayar';
+    case 'preparing': return 'Disiapkan';
+    case 'ready': return 'Siap';
+    case 'completed': return 'Selesai';
+    case 'cancelled': return 'Dibatalkan';
+    default: return status;
+  }
+};
+
+const formatPrice = (price: number) => {
+  return new Intl.NumberFormat('id-ID', {
+    style: 'currency',
+    currency: 'IDR',
+    minimumFractionDigits: 0,
+  }).format(price);
+};
+
+const formatDate = (dateString: string) => {
+  return new Date(dateString).toLocaleDateString('id-ID', {
+    year: 'numeric',
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit'
+  });
+};
 
 const OrderManagement = () => {
   const [orders, setOrders] = useState<Order[]>([]);
@@ -20,7 +60,6 @@ const OrderManagement = () => {
   const [loading, setLoading] = useState(true);
   const [searchTerm, setSearchTerm] = useState('');
   const [statusFilter, setStatusFilter] = useState('all');
-  const [paymentFilter, setPaymentFilter] = useState('all');
 
   useEffect(() => {
     fetchOrders();
@@ -28,7 +67,7 @@ const OrderManagement = () => {
 
   useEffect(() => {
     filterOrders();
-  }, [orders, searchTerm, statusFilter, paymentFilter]);
+  }, [orders, searchTerm, statusFilter]);
 
   const fetchOrders = async () => {
     try {
@@ -36,13 +75,20 @@ const OrderManagement = () => {
         .from('orders')
         .select(`
           *,
+          children (
+            name,
+            class
+          ),
           order_items (
             id,
             quantity,
-            price,
-            food_items (
-              name,
-              image_url
+            unit_price,
+            subtotal,
+            daily_menus (
+              food_items (
+                name,
+                image_url
+              )
             )
           )
         `)
@@ -68,8 +114,8 @@ const OrderManagement = () => {
     // Filter by search term
     if (searchTerm) {
       filtered = filtered.filter(order =>
-        order.child_name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
-        order.child_class?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.children?.name?.toLowerCase().includes(searchTerm.toLowerCase()) ||
+        order.children?.class?.toLowerCase().includes(searchTerm.toLowerCase()) ||
         order.id.toLowerCase().includes(searchTerm.toLowerCase())
       );
     }
@@ -77,11 +123,6 @@ const OrderManagement = () => {
     // Filter by status
     if (statusFilter !== 'all') {
       filtered = filtered.filter(order => order.status === statusFilter);
-    }
-
-    // Filter by payment status
-    if (paymentFilter !== 'all') {
-      filtered = filtered.filter(order => order.payment_status === paymentFilter);
     }
 
     setFilteredOrders(filtered);
@@ -146,7 +187,7 @@ const OrderManagement = () => {
           </CardTitle>
         </CardHeader>
         <CardContent>
-          <div className="grid grid-cols-1 md:grid-cols-4 gap-4">
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div className="relative">
               <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-gray-400 h-4 w-4" />
               <Input
@@ -164,31 +205,17 @@ const OrderManagement = () => {
               <SelectContent>
                 <SelectItem value="all">Semua Status</SelectItem>
                 <SelectItem value="pending">Menunggu</SelectItem>
-                <SelectItem value="confirmed">Dikonfirmasi</SelectItem>
+                <SelectItem value="paid">Dibayar</SelectItem>
                 <SelectItem value="preparing">Disiapkan</SelectItem>
                 <SelectItem value="ready">Siap</SelectItem>
-                <SelectItem value="delivered">Terkirim</SelectItem>
+                <SelectItem value="completed">Selesai</SelectItem>
                 <SelectItem value="cancelled">Dibatalkan</SelectItem>
-              </SelectContent>
-            </Select>
-            
-            <Select value={paymentFilter} onValueChange={setPaymentFilter}>
-              <SelectTrigger>
-                <SelectValue placeholder="Status Pembayaran" />
-              </SelectTrigger>
-              <SelectContent>
-                <SelectItem value="all">Semua Pembayaran</SelectItem>
-                <SelectItem value="pending">Belum Bayar</SelectItem>
-                <SelectItem value="paid">Lunas</SelectItem>
-                <SelectItem value="failed">Gagal</SelectItem>
-                <SelectItem value="refunded">Dikembalikan</SelectItem>
               </SelectContent>
             </Select>
             
             <Button onClick={() => {
               setSearchTerm('');
               setStatusFilter('all');
-              setPaymentFilter('all');
             }} variant="outline">
               Reset Filter
             </Button>
@@ -204,16 +231,16 @@ const OrderManagement = () => {
               <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
                 {/* Order Info */}
                 <div>
-                  <h3 className="font-semibold text-lg mb-2">{order.child_name}</h3>
+                  <h3 className="font-semibold text-lg mb-2">{order.children?.name || 'Unknown'}</h3>
                   <div className="space-y-1 text-sm text-gray-600">
-                    <p>Kelas: {order.child_class}</p>
+                    <p>Kelas: {order.children?.class || 'Unknown'}</p>
                     <p>ID: {order.id.slice(0, 8)}...</p>
                     <p>Tanggal: {formatDate(order.created_at)}</p>
                     <p>Total: {formatPrice(order.total_amount)}</p>
                   </div>
-                  {order.notes && (
+                  {order.special_notes && (
                     <p className="text-sm text-gray-600 mt-2">
-                      <strong>Catatan:</strong> {order.notes}
+                      <strong>Catatan:</strong> {order.special_notes}
                     </p>
                   )}
                 </div>
@@ -224,7 +251,7 @@ const OrderManagement = () => {
                   <div className="space-y-1">
                     {order.order_items.map((item) => (
                       <div key={item.id} className="text-sm">
-                        {item.quantity}x {item.food_items.name} - {formatPrice(item.price)}
+                        {item.quantity}x {item.daily_menus?.food_items?.name || 'Unknown'} - {formatPrice(item.subtotal)}
                       </div>
                     ))}
                   </div>
@@ -235,14 +262,8 @@ const OrderManagement = () => {
                   <div className="space-y-2">
                     <div>
                       <label className="text-sm font-medium">Status Pesanan:</label>
-                      <Badge className={`ml-2 ${getStatusColor(order.status)}`}>
-                        {getStatusText(order.status)}
-                      </Badge>
-                    </div>
-                    <div>
-                      <label className="text-sm font-medium">Status Pembayaran:</label>
-                      <Badge className={`ml-2 ${getPaymentStatusColor(order.payment_status)}`}>
-                        {getPaymentStatusText(order.payment_status)}
+                      <Badge className={`ml-2 ${getStatusColor(order.status || 'pending')}`}>
+                        {getStatusText(order.status || 'pending')}
                       </Badge>
                     </div>
                   </div>
@@ -250,7 +271,7 @@ const OrderManagement = () => {
                   <div className="space-y-2">
                     <label className="text-sm font-medium">Update Status:</label>
                     <Select
-                      value={order.status}
+                      value={order.status || 'pending'}
                       onValueChange={(value: OrderStatus) => updateOrderStatus(order.id, value)}
                     >
                       <SelectTrigger>
@@ -258,10 +279,10 @@ const OrderManagement = () => {
                       </SelectTrigger>
                       <SelectContent>
                         <SelectItem value="pending">Menunggu</SelectItem>
-                        <SelectItem value="confirmed">Dikonfirmasi</SelectItem>
+                        <SelectItem value="paid">Dibayar</SelectItem>
                         <SelectItem value="preparing">Disiapkan</SelectItem>
                         <SelectItem value="ready">Siap</SelectItem>
-                        <SelectItem value="delivered">Terkirim</SelectItem>
+                        <SelectItem value="completed">Selesai</SelectItem>
                         <SelectItem value="cancelled">Dibatalkan</SelectItem>
                       </SelectContent>
                     </Select>
@@ -278,7 +299,7 @@ const OrderManagement = () => {
           <CardContent>
             <h3 className="text-lg font-medium mb-2">Tidak Ada Pesanan</h3>
             <p className="text-gray-600">
-              {searchTerm || statusFilter !== 'all' || paymentFilter !== 'all' 
+              {searchTerm || statusFilter !== 'all' 
                 ? 'Tidak ada pesanan yang sesuai dengan filter'
                 : 'Belum ada pesanan masuk'
               }

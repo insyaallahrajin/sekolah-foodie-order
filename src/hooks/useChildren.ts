@@ -7,7 +7,7 @@ import { toast } from '@/components/ui/use-toast';
 interface Child {
   id: string;
   name: string;
-  class_name: string;
+  class: string;
 }
 
 export const useChildren = () => {
@@ -24,9 +24,8 @@ export const useChildren = () => {
     try {
       const { data, error } = await supabase
         .from('children')
-        .select('id, name, class_name')
-        .eq('parent_id', user?.id)
-        .eq('is_active', true);
+        .select('id, name, class')
+        .eq('parent_id', user?.id);
 
       if (error) throw error;
       setChildren(data || []);

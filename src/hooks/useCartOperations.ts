@@ -8,7 +8,7 @@ import { CartItem } from '@/types/cart';
 interface Child {
   id: string;
   name: string;
-  class_name: string;
+  class: string;
 }
 
 export const useCartOperations = () => {
@@ -18,25 +18,12 @@ export const useCartOperations = () => {
   const [loading, setLoading] = useState(false);
   const { user } = useAuth();
 
-  useEffect(() => {
-    // Load Midtrans Snap script
-    const script = document.createElement('script');
-    script.src = 'https://app.sandbox.midtrans.com/snap/snap.js';
-    script.setAttribute('data-client-key', 'SB-Mid-client-your-client-key-here');
-    document.body.appendChild(script);
-
-    return () => {
-      document.body.removeChild(script);
-    };
-  }, []);
-
   const fetchChildren = async () => {
     try {
       const { data, error } = await supabase
         .from('children')
-        .select('id, name, class_name')
-        .eq('parent_id', user?.id)
-        .eq('is_active', true);
+        .select('id, name, class')
+        .eq('parent_id', user?.id);
 
       if (error) throw error;
       setChildren(data || []);
@@ -67,35 +54,36 @@ export const useCartOperations = () => {
     setLoading(true);
 
     try {
-      const selectedChild = children.find(child => child.id === selectedChildId);
       const totalAmount = items.reduce((total, item) => total + (item.price * item.quantity), 0);
-      const orderId = `ORDER-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`;
+      const orderDate = new Date().toISOString().split('T')[0];
+      const deliveryDate = new Date();
+      deliveryDate.setDate(deliveryDate.getDate() + 1);
 
-      // Create order first
+      // Create order
       const { data: order, error: orderError } = await supabase
         .from('orders')
         .insert({
-          user_id: user?.id,
+          parent_id: user?.id,
           child_id: selectedChildId,
-          child_name: selectedChild?.name,
-          child_class: selectedChild?.class_name,
+          order_date: orderDate,
+          delivery_date: deliveryDate.toISOString().split('T')[0],
           total_amount: totalAmount,
-          midtrans_order_id: orderId,
-          notes: notes || null,
+          special_notes: notes || null,
           status: 'pending',
-          payment_status: 'pending'
+          payment_method: 'online'
         })
         .select()
         .single();
 
       if (orderError) throw orderError;
 
-      // Create order items using the correct food_item_id from the cart items
+      // Create order items
       const orderItems = items.map(item => ({
         order_id: order.id,
-        food_item_id: item.food_item_id,
+        daily_menu_id: item.id, // Assuming CartItem has daily menu ID
         quantity: item.quantity,
-        price: item.price
+        unit_price: item.price,
+        subtotal: item.price * item.quantity
       }));
 
       const { error: itemsError } = await supabase
@@ -104,73 +92,12 @@ export const useCartOperations = () => {
 
       if (itemsError) throw itemsError;
 
-      // Prepare payment data
-      const customerDetails = {
-        first_name: user?.user_metadata?.full_name || user?.email?.split('@')[0] || 'Customer',
-        email: user?.email,
-        phone: user?.user_metadata?.phone || '08123456789',
-      };
-
-      const itemDetails = items.map(item => ({
-        id: item.id,
-        price: item.price,
-        quantity: item.quantity,
-        name: item.name,
-      }));
-
-      // Create payment transaction
-      const { data: paymentData, error: paymentError } = await supabase.functions.invoke(
-        'create-payment',
-        {
-          body: {
-            orderId,
-            amount: totalAmount,
-            customerDetails,
-            itemDetails,
-          },
-        }
-      );
-
-      if (paymentError) throw paymentError;
-
-      // Open Midtrans Snap
-      if (window.snap && paymentData.snap_token) {
-        window.snap.pay(paymentData.snap_token, {
-          onSuccess: (result) => {
-            console.log('Payment success:', result);
-            toast({
-              title: "Pembayaran Berhasil!",
-              description: "Pesanan Anda telah dikonfirmasi dan sedang diproses.",
-            });
-            onSuccess();
-          },
-          onPending: (result) => {
-            console.log('Payment pending:', result);
-            toast({
-              title: "Menunggu Pembayaran",
-              description: "Pembayaran Anda sedang diproses. Mohon tunggu konfirmasi.",
-            });
-            onSuccess();
-          },
-          onError: (result) => {
-            console.error('Payment error:', result);
-            toast({
-              title: "Pembayaran Gagal",
-              description: "Terjadi kesalahan dalam proses pembayaran. Silakan coba lagi.",
-              variant: "destructive",
-            });
-          },
-          onClose: () => {
-            console.log('Payment popup closed');
-            toast({
-              title: "Pembayaran Dibatalkan",
-              description: "Anda membatalkan proses pembayaran.",
-            });
-          }
-        });
-      } else {
-        throw new Error('Midtrans Snap not loaded or token not received');
-      }
+      toast({
+        title: "Berhasil!",
+        description: "Pesanan berhasil dibuat",
+      });
+      
+      onSuccess();
     } catch (error: any) {
       console.error('Error creating order:', error);
       toast({
