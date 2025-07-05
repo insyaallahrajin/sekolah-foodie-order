@@ -4,12 +4,7 @@ import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/components/ui/use-toast';
 import { CartItem } from '@/types/cart';
-
-interface Child {
-  id: string;
-  name: string;
-  class: string;
-}
+import { Child } from '@/types/child';
 
 export const useCartOperations = () => {
   const [children, setChildren] = useState<Child[]>([]);

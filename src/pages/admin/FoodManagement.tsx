@@ -1,4 +1,3 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -23,33 +22,28 @@ interface FoodItem {
 }
 
 const FoodManagement = () => {
-  const [foodItems, setFoodItems] = useState<FoodItem[]>([]);
+  const [items, setItems] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingItem, setEditingItem] = useState<FoodItem | null>(null);
-  
+  const [editingItem, setEditingItem] = useState<any>(null);
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
   const [formData, setFormData] = useState({
     name: '',
     description: '',
-    price: '',
+    base_price: 0,
     category: 'makanan' as 'makanan' | 'minuman',
     image_url: '',
-    is_available: true
+    is_active: true,
   });
 
-  useEffect(() => {
-    fetchFoodItems();
-  }, []);
-
-  const fetchFoodItems = async () => {
+  const fetchItems = async () => {
     try {
       const { data, error } = await supabase
         .from('food_items')
         .select('*')
-        .order('name');
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
-      setFoodItems(data || []);
+      setItems(data || []);
     } catch (error) {
       console.error('Error fetching food items:', error);
       toast({
@@ -62,69 +56,65 @@ const FoodManagement = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  useEffect(() => {
+    fetchItems();
+  }, []);
+
+  const handleSubmit = async () => {
     try {
-      const payload = {
-        name: formData.name,
-        description: formData.description || null,
-        price: parseFloat(formData.price),
-        category: formData.category,
-        image_url: formData.image_url || null,
-        is_available: formData.is_available
-      };
+      setLoading(true);
 
       if (editingItem) {
         const { error } = await supabase
           .from('food_items')
-          .update(payload)
+          .update(formData)
           .eq('id', editingItem.id);
-        
+
         if (error) throw error;
-        
+
         toast({
           title: "Berhasil",
-          description: "Menu berhasil diperbarui",
+          description: "Item berhasil diperbarui",
         });
       } else {
         const { error } = await supabase
           .from('food_items')
-          .insert([payload]);
-        
+          .insert([formData]);
+
         if (error) throw error;
-        
+
         toast({
           title: "Berhasil",
-          description: "Menu berhasil ditambahkan",
+          description: "Item berhasil ditambahkan",
         });
       }
 
-      setDialogOpen(false);
-      setEditingItem(null);
+      await fetchItems();
+      setIsDialogOpen(false);
       resetForm();
-      fetchFoodItems();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving food item:', error);
       toast({
         title: "Error",
-        description: "Gagal menyimpan menu",
+        description: error.message || "Gagal menyimpan item",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleEdit = (item: FoodItem) => {
+  const handleEdit = (item: any) => {
     setEditingItem(item);
     setFormData({
       name: item.name,
       description: item.description || '',
-      price: item.price.toString(),
+      base_price: item.base_price,
       category: item.category,
       image_url: item.image_url || '',
-      is_available: item.is_available
+      is_active: item.is_active
     });
-    setDialogOpen(true);
+    setIsDialogOpen(true);
   };
 
   const handleDelete = async (id: string) => {
@@ -138,15 +128,15 @@ const FoodManagement = () => {
 
       toast({
         title: "Berhasil",
-        description: "Menu berhasil dihapus",
+        description: "Item berhasil dihapus",
       });
       
-      fetchFoodItems();
+      fetchItems();
     } catch (error) {
       console.error('Error deleting food item:', error);
       toast({
         title: "Error",
-        description: "Gagal menghapus menu",
+        description: "Gagal menghapus item",
         variant: "destructive",
       });
     }
@@ -156,17 +146,17 @@ const FoodManagement = () => {
     setFormData({
       name: '',
       description: '',
-      price: '',
+      base_price: 0,
       category: 'makanan',
       image_url: '',
-      is_available: true
+      is_active: true
     });
   };
 
   const handleAddNew = () => {
     setEditingItem(null);
     resetForm();
-    setDialogOpen(true);
+    setIsDialogOpen(true);
   };
 
   if (loading) {
@@ -194,7 +184,7 @@ const FoodManagement = () => {
           <p className="text-gray-600">Kelola menu makanan dan minuman</p>
         </div>
         
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
+        <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
           <DialogTrigger asChild>
             <Button onClick={handleAddNew} className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
               <Plus className="h-4 w-4 mr-2" />
@@ -241,14 +231,14 @@ const FoodManagement = () => {
                 </div>
                 
                 <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="price" className="text-right">
+                  <Label htmlFor="base_price" className="text-right">
                     Harga
                   </Label>
                   <Input
-                    id="price"
+                    id="base_price"
                     type="number"
-                    value={formData.price}
-                    onChange={(e) => setFormData({ ...formData, price: e.target.value })}
+                    value={formData.base_price}
+                    onChange={(e) => setFormData({ ...formData, base_price: parseFloat(e.target.value) })}
                     className="col-span-3"
                     required
                   />
@@ -290,7 +280,7 @@ const FoodManagement = () => {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {foodItems.map((item) => (
+        {items.map((item) => (
           <Card key={item.id}>
             <CardHeader>
               <div className="flex justify-between items-start">
@@ -302,8 +292,8 @@ const FoodManagement = () => {
                     </Badge>
                   </CardDescription>
                 </div>
-                <Badge variant={item.is_available ? 'default' : 'destructive'}>
-                  {item.is_available ? 'Tersedia' : 'Tidak Tersedia'}
+                <Badge variant={item.is_active ? 'default' : 'destructive'}>
+                  {item.is_active ? 'Tersedia' : 'Tidak Tersedia'}
                 </Badge>
               </div>
             </CardHeader>
@@ -322,7 +312,7 @@ const FoodManagement = () => {
               
               <div className="flex justify-between items-center">
                 <span className="text-lg font-bold text-orange-600">
-                  Rp {item.price.toLocaleString('id-ID')}
+                  Rp {item.base_price.toLocaleString('id-ID')}
                 </span>
                 
                 <div className="space-x-2">
@@ -343,7 +333,7 @@ const FoodManagement = () => {
         ))}
       </div>
 
-      {foodItems.length === 0 && (
+      {items.length === 0 && (
         <Card className="text-center py-12">
           <CardContent>
             <h3 className="text-lg font-medium mb-2">Belum Ada Menu</h3>

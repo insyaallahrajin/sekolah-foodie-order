@@ -3,12 +3,7 @@ import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { useAuth } from '@/hooks/useAuth';
 import { toast } from '@/components/ui/use-toast';
-
-interface Child {
-  id: string;
-  name: string;
-  class: string;
-}
+import { Child } from '@/types/child';
 
 export const useChildren = () => {
   const [children, setChildren] = useState<Child[]>([]);
@@ -24,7 +19,7 @@ export const useChildren = () => {
     try {
       const { data, error } = await supabase
         .from('children')
-        .select('id, name, class')
+        .select('id, name, class, parent_id')
         .eq('parent_id', user?.id);
 
       if (error) throw error;

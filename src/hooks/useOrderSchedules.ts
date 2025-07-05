@@ -2,16 +2,7 @@
 import { useState, useEffect } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { format, isBefore, isToday, isWeekend } from 'date-fns';
-
-interface OrderSchedule {
-  id: string;
-  is_weekend_enabled: boolean;
-  max_orders_per_day: number | null;
-  order_start_time: string | null;
-  order_end_time: string | null;
-  created_at: string | null;
-  updated_at: string | null;
-}
+import { OrderSchedule } from '@/types/orderSchedule';
 
 export const useOrderSchedules = () => {
   const [orderSchedules, setOrderSchedules] = useState<OrderSchedule[]>([]);

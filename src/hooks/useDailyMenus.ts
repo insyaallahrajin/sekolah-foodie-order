@@ -3,22 +3,7 @@ import { useState } from 'react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from '@/components/ui/use-toast';
 import { format } from 'date-fns';
-
-interface DailyMenu {
-  id: string;
-  menu_date: string;
-  food_item_id: string;
-  price: number;
-  is_available: boolean;
-  available_quantity: number | null;
-  remaining_quantity: number;
-  food_items: {
-    name: string;
-    description: string;
-    image_url: string;
-    category: string;
-  };
-}
+import { DailyMenu } from '@/types/dailyMenu';
 
 export const useDailyMenus = () => {
   const [dailyMenus, setDailyMenus] = useState<DailyMenu[]>([]);

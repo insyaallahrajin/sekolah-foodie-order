@@ -16,7 +16,7 @@ export interface Order {
     quantity: number;
     unit_price: number;
     subtotal: number;
-    daily_menu_id: string | null;
+    daily_menu_id: string;
     daily_menus?: {
       food_items: {
         name: string;

@@ -1,57 +1,32 @@
-
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Input } from '@/components/ui/input';
 import { Label } from '@/components/ui/label';
-import { Textarea } from '@/components/ui/textarea';
+import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
-import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle, DialogTrigger } from '@/components/ui/dialog';
-import { Badge } from '@/components/ui/badge';
 import { toast } from '@/components/ui/use-toast';
 import { supabase } from '@/integrations/supabase/client';
-import { Calendar, Plus, Edit, Trash2, Clock, Users } from 'lucide-react';
-import { format } from 'date-fns';
-import { id } from 'date-fns/locale';
-
-interface OrderSchedule {
-  id: string;
-  date: string;
-  cutoff_date: string | null;
-  cutoff_time: string | null;
-  max_orders: number | null;
-  current_orders: number | null;
-  is_blocked: boolean;
-  notes: string | null;
-  created_at: string;
-  updated_at: string | null;
-}
+import { OrderSchedule } from '@/types/orderSchedule';
 
 const ScheduleManagement = () => {
-  const [schedules, setSchedules] = useState<OrderSchedule[]>([]);
+  const [schedules, setSchedules] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [dialogOpen, setDialogOpen] = useState(false);
-  const [editingSchedule, setEditingSchedule] = useState<OrderSchedule | null>(null);
-  
+  const [isDialogOpen, setIsDialogOpen] = useState(false);
+  const [editingSchedule, setEditingSchedule] = useState<any>(null);
   const [formData, setFormData] = useState({
-    date: '',
-    cutoff_date: '',
-    cutoff_time: '15:00',
-    max_orders: '',
-    is_blocked: false,
-    notes: ''
+    is_weekend_enabled: false,
+    max_orders_per_day: 100,
+    order_start_time: '12:00',
+    order_end_time: '17:00',
   });
-
-  useEffect(() => {
-    fetchSchedules();
-  }, []);
 
   const fetchSchedules = async () => {
     try {
       const { data, error } = await supabase
         .from('order_schedules')
         .select('*')
-        .order('date', { ascending: true });
+        .order('created_at', { ascending: false });
 
       if (error) throw error;
       setSchedules(data || []);
@@ -59,7 +34,7 @@ const ScheduleManagement = () => {
       console.error('Error fetching schedules:', error);
       toast({
         title: "Error",
-        description: "Gagal memuat data jadwal",
+        description: "Gagal memuat jadwal",
         variant: "destructive",
       });
     } finally {
@@ -67,27 +42,22 @@ const ScheduleManagement = () => {
     }
   };
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    
+  useEffect(() => {
+    fetchSchedules();
+  }, []);
+
+  const handleSubmit = async () => {
     try {
-      const payload = {
-        date: formData.date,
-        cutoff_date: formData.cutoff_date || null,
-        cutoff_time: formData.cutoff_time || '15:00:00',
-        max_orders: formData.max_orders ? parseInt(formData.max_orders) : null,
-        is_blocked: formData.is_blocked,
-        notes: formData.notes || null
-      };
+      setLoading(true);
 
       if (editingSchedule) {
         const { error } = await supabase
           .from('order_schedules')
-          .update(payload)
+          .update(formData)
           .eq('id', editingSchedule.id);
-        
+
         if (error) throw error;
-        
+
         toast({
           title: "Berhasil",
           description: "Jadwal berhasil diperbarui",
@@ -95,45 +65,55 @@ const ScheduleManagement = () => {
       } else {
         const { error } = await supabase
           .from('order_schedules')
-          .insert([payload]);
-        
+          .insert([formData]);
+
         if (error) throw error;
-        
+
         toast({
           title: "Berhasil",
           description: "Jadwal berhasil ditambahkan",
         });
       }
 
-      setDialogOpen(false);
-      setEditingSchedule(null);
+      await fetchSchedules();
+      setIsDialogOpen(false);
       resetForm();
-      fetchSchedules();
-    } catch (error) {
+    } catch (error: any) {
       console.error('Error saving schedule:', error);
       toast({
         title: "Error",
-        description: "Gagal menyimpan jadwal",
+        description: error.message || "Gagal menyimpan jadwal",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
 
-  const handleEdit = (schedule: OrderSchedule) => {
+  const resetForm = () => {
+    setFormData({
+      is_weekend_enabled: false,
+      max_orders_per_day: 100,
+      order_start_time: '12:00',
+      order_end_time: '17:00',
+    });
+    setEditingSchedule(null);
+  };
+
+  const handleEdit = (schedule: any) => {
     setEditingSchedule(schedule);
     setFormData({
-      date: schedule.date,
-      cutoff_date: schedule.cutoff_date || '',
-      cutoff_time: schedule.cutoff_time?.slice(0, 5) || '15:00',
-      max_orders: schedule.max_orders?.toString() || '',
-      is_blocked: schedule.is_blocked || false,
-      notes: schedule.notes || ''
+      is_weekend_enabled: schedule.is_weekend_enabled,
+      max_orders_per_day: schedule.max_orders_per_day,
+      order_start_time: schedule.order_start_time,
+      order_end_time: schedule.order_end_time,
     });
-    setDialogOpen(true);
+    setIsDialogOpen(true);
   };
 
   const handleDelete = async (id: string) => {
     try {
+      setLoading(true);
       const { error } = await supabase
         .from('order_schedules')
         .delete()
@@ -145,261 +125,124 @@ const ScheduleManagement = () => {
         title: "Berhasil",
         description: "Jadwal berhasil dihapus",
       });
-      
-      fetchSchedules();
-    } catch (error) {
+
+      await fetchSchedules();
+    } catch (error: any) {
       console.error('Error deleting schedule:', error);
       toast({
         title: "Error",
-        description: "Gagal menghapus jadwal",
+        description: error.message || "Gagal menghapus jadwal",
         variant: "destructive",
       });
+    } finally {
+      setLoading(false);
     }
   };
-
-  const resetForm = () => {
-    setFormData({
-      date: '',
-      cutoff_date: '',
-      cutoff_time: '15:00',
-      max_orders: '',
-      is_blocked: false,
-      notes: ''
-    });
-  };
-
-  const handleAddNew = () => {
-    setEditingSchedule(null);
-    resetForm();
-    setDialogOpen(true);
-  };
-
-  const formatDateForDisplay = (dateString: string) => {
-    try {
-      return format(new Date(dateString), 'dd MMMM yyyy', { locale: id });
-    } catch {
-      return dateString;
-    }
-  };
-
-  if (loading) {
-    return (
-      <div className="max-w-7xl mx-auto p-6">
-        <div className="animate-pulse space-y-6">
-          <div className="h-8 bg-gray-200 rounded w-1/3"></div>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-            {Array.from({ length: 6 }).map((_, i) => (
-              <div key={i} className="h-48 bg-gray-200 rounded"></div>
-            ))}
-          </div>
-        </div>
-      </div>
-    );
-  }
 
   return (
-    <div className="max-w-7xl mx-auto p-6">
-      <div className="flex justify-between items-center mb-8">
-        <div>
-          <h1 className="text-3xl font-bold bg-gradient-to-r from-orange-600 to-red-600 bg-clip-text text-transparent mb-2">
-            Manajemen Jadwal & Kuota
-          </h1>
-          <p className="text-gray-600">Kelola jadwal pengiriman dan kuota pesanan</p>
-        </div>
-        
-        <Dialog open={dialogOpen} onOpenChange={setDialogOpen}>
-          <DialogTrigger asChild>
-            <Button onClick={handleAddNew} className="bg-gradient-to-r from-orange-500 to-red-500 hover:from-orange-600 hover:to-red-600">
-              <Plus className="h-4 w-4 mr-2" />
-              Tambah Jadwal
-            </Button>
-          </DialogTrigger>
-          <DialogContent className="sm:max-w-[500px]">
-            <DialogHeader>
-              <DialogTitle>
-                {editingSchedule ? 'Edit Jadwal' : 'Tambah Jadwal Baru'}
-              </DialogTitle>
-              <DialogDescription>
-                {editingSchedule ? 'Perbarui informasi jadwal' : 'Atur jadwal pengiriman dan kuota pesanan'}
-              </DialogDescription>
-            </DialogHeader>
-            <form onSubmit={handleSubmit}>
-              <div className="grid gap-4 py-4">
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="date" className="text-right">
-                    Tanggal Pengiriman
-                  </Label>
-                  <Input
-                    id="date"
-                    type="date"
-                    value={formData.date}
-                    onChange={(e) => setFormData({ ...formData, date: e.target.value })}
-                    className="col-span-3"
-                    required
-                  />
-                </div>
-                
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="cutoff_date" className="text-right">
-                    Batas Tanggal Pesan
-                  </Label>
-                  <Input
-                    id="cutoff_date"
-                    type="date"
-                    value={formData.cutoff_date}
-                    onChange={(e) => setFormData({ ...formData, cutoff_date: e.target.value })}
-                    className="col-span-3"
-                  />
-                </div>
-                
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="cutoff_time" className="text-right">
-                    Batas Jam Pesan
-                  </Label>
-                  <Input
-                    id="cutoff_time"
-                    type="time"
-                    value={formData.cutoff_time}
-                    onChange={(e) => setFormData({ ...formData, cutoff_time: e.target.value })}
-                    className="col-span-3"
-                  />
-                </div>
-                
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="max_orders" className="text-right">
-                    Maksimal Pesanan
-                  </Label>
-                  <Input
-                    id="max_orders"
-                    type="number"
-                    value={formData.max_orders}
-                    onChange={(e) => setFormData({ ...formData, max_orders: e.target.value })}
-                    className="col-span-3"
-                    placeholder="Kosongkan jika tidak terbatas"
-                  />
-                </div>
-                
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="is_blocked" className="text-right">
-                    Blokir Tanggal
-                  </Label>
-                  <div className="col-span-3">
+    <div className="max-w-4xl mx-auto p-4">
+      <Card>
+        <CardHeader>
+          <CardTitle>Manajemen Jadwal Pemesanan</CardTitle>
+          <CardDescription>Atur jadwal dan batasan pemesanan makanan</CardDescription>
+        </CardHeader>
+        <CardContent>
+          <div className="mb-4">
+            <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+              <DialogTrigger asChild>
+                <Button>
+                  {editingSchedule ? 'Edit Jadwal' : 'Tambah Jadwal'}
+                </Button>
+              </DialogTrigger>
+              <DialogContent>
+                <DialogHeader>
+                  <DialogTitle>{editingSchedule ? 'Edit Jadwal' : 'Tambah Jadwal'}</DialogTitle>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="is_weekend_enabled" className="text-right">
+                      Aktif di Akhir Pekan
+                    </Label>
                     <Switch
-                      id="is_blocked"
-                      checked={formData.is_blocked}
-                      onCheckedChange={(checked) => setFormData({ ...formData, is_blocked: checked })}
+                      id="is_weekend_enabled"
+                      checked={formData.is_weekend_enabled}
+                      onCheckedChange={(checked) => setFormData({ ...formData, is_weekend_enabled: checked })}
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="max_orders_per_day" className="text-right">
+                      Maksimal Pesanan per Hari
+                    </Label>
+                    <Input
+                      type="number"
+                      id="max_orders_per_day"
+                      value={formData.max_orders_per_day}
+                      onChange={(e) => setFormData({ ...formData, max_orders_per_day: parseInt(e.target.value) })}
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="order_start_time" className="text-right">
+                      Waktu Mulai Pemesanan
+                    </Label>
+                    <Input
+                      type="time"
+                      id="order_start_time"
+                      value={formData.order_start_time}
+                      onChange={(e) => setFormData({ ...formData, order_start_time: e.target.value })}
+                      className="col-span-3"
+                    />
+                  </div>
+                  <div className="grid grid-cols-4 items-center gap-4">
+                    <Label htmlFor="order_end_time" className="text-right">
+                      Waktu Selesai Pemesanan
+                    </Label>
+                    <Input
+                      type="time"
+                      id="order_end_time"
+                      value={formData.order_end_time}
+                      onChange={(e) => setFormData({ ...formData, order_end_time: e.target.value })}
+                      className="col-span-3"
                     />
                   </div>
                 </div>
-                
-                <div className="grid grid-cols-4 items-center gap-4">
-                  <Label htmlFor="notes" className="text-right">
-                    Catatan
-                  </Label>
-                  <Textarea
-                    id="notes"
-                    value={formData.notes}
-                    onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
-                    className="col-span-3"
-                    placeholder="Catatan tambahan..."
-                  />
-                </div>
-              </div>
-              <DialogFooter>
-                <Button type="submit">
-                  {editingSchedule ? 'Perbarui' : 'Tambah'}
+                <Button onClick={handleSubmit} disabled={loading}>
+                  {loading ? 'Menyimpan...' : 'Simpan'}
                 </Button>
-              </DialogFooter>
-            </form>
-          </DialogContent>
-        </Dialog>
-      </div>
+              </DialogContent>
+            </Dialog>
+          </div>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-        {schedules.map((schedule) => (
-          <Card key={schedule.id} className={schedule.is_blocked ? 'border-red-200 bg-red-50' : ''}>
-            <CardHeader>
-              <div className="flex justify-between items-start">
-                <div>
-                  <CardTitle className="flex items-center text-lg">
-                    <Calendar className="h-5 w-5 mr-2" />
-                    {formatDateForDisplay(schedule.date)}
-                  </CardTitle>
-                  <CardDescription>
-                    {schedule.is_blocked ? (
-                      <Badge variant="destructive">Diblokir</Badge>
-                    ) : (
-                      <Badge variant="default">Tersedia</Badge>
-                    )}
-                  </CardDescription>
-                </div>
-              </div>
-            </CardHeader>
-            <CardContent>
-              <div className="space-y-3">
-                {schedule.cutoff_date && (
-                  <div className="flex items-center text-sm">
-                    <Clock className="h-4 w-4 mr-2 text-gray-500" />
-                    <span>Batas: {formatDateForDisplay(schedule.cutoff_date)} {schedule.cutoff_time?.slice(0, 5)}</span>
-                  </div>
-                )}
-                
-                {schedule.max_orders && (
-                  <div className="flex items-center text-sm">
-                    <Users className="h-4 w-4 mr-2 text-gray-500" />
-                    <span>
-                      Kuota: {schedule.current_orders || 0}/{schedule.max_orders}
-                    </span>
-                    <div className="ml-2 flex-1">
-                      <div className="w-full bg-gray-200 rounded-full h-2">
-                        <div 
-                          className="bg-orange-500 h-2 rounded-full" 
-                          style={{ 
-                            width: `${Math.min(((schedule.current_orders || 0) / schedule.max_orders) * 100, 100)}%` 
-                          }}
-                        ></div>
-                      </div>
-                    </div>
-                  </div>
-                )}
-                
-                {schedule.notes && (
-                  <p className="text-sm text-gray-600 bg-gray-100 p-2 rounded">
-                    {schedule.notes}
-                  </p>
-                )}
-                
-                <div className="flex justify-end space-x-2 pt-2">
-                  <Button size="sm" variant="outline" onClick={() => handleEdit(schedule)}>
-                    <Edit className="h-4 w-4" />
-                  </Button>
-                  <Button 
-                    size="sm" 
-                    variant="destructive" 
-                    onClick={() => handleDelete(schedule.id)}
-                  >
-                    <Trash2 className="h-4 w-4" />
-                  </Button>
-                </div>
-              </div>
-            </CardContent>
-          </Card>
-        ))}
-      </div>
-
-      {schedules.length === 0 && (
-        <Card className="text-center py-12">
-          <CardContent>
-            <Calendar className="h-16 w-16 mx-auto text-gray-400 mb-4" />
-            <h3 className="text-lg font-medium mb-2">Belum Ada Jadwal</h3>
-            <p className="text-gray-600 mb-4">Mulai atur jadwal pengiriman dan kuota pesanan</p>
-            <Button onClick={handleAddNew}>
-              <Plus className="h-4 w-4 mr-2" />
-              Tambah Jadwal Pertama
-            </Button>
-          </CardContent>
-        </Card>
-      )}
+          {loading ? (
+            <div className="flex justify-center py-4">
+              <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-orange-500"></div>
+            </div>
+          ) : (
+            <div className="grid gap-4">
+              {schedules.map((schedule) => (
+                <Card key={schedule.id}>
+                  <CardHeader>
+                    <CardTitle>Jadwal #{schedule.id}</CardTitle>
+                    <CardDescription>
+                      Maks: {schedule.max_orders_per_day} pesanan, Akhir pekan:{' '}
+                      {schedule.is_weekend_enabled ? 'Aktif' : 'Tidak Aktif'}
+                    </CardDescription>
+                  </CardHeader>
+                  <CardContent className="flex justify-end">
+                    <Button variant="secondary" size="sm" onClick={() => handleEdit(schedule)}>
+                      Edit
+                    </Button>
+                    <Button variant="destructive" size="sm" onClick={() => handleDelete(schedule.id)} className="ml-2">
+                      Hapus
+                    </Button>
+                  </CardContent>
+                </Card>
+              ))}
+            </div>
+          )}
+        </CardContent>
+      </Card>
     </div>
   );
 };
