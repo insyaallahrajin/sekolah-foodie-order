@@ -1,3 +1,4 @@
+
 import { useState, useEffect } from 'react';
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
@@ -10,10 +11,10 @@ import { supabase } from '@/integrations/supabase/client';
 import { OrderSchedule } from '@/types/orderSchedule';
 
 const ScheduleManagement = () => {
-  const [schedules, setSchedules] = useState<any[]>([]);
+  const [schedules, setSchedules] = useState<OrderSchedule[]>([]);
   const [loading, setLoading] = useState(true);
   const [isDialogOpen, setIsDialogOpen] = useState(false);
-  const [editingSchedule, setEditingSchedule] = useState<any>(null);
+  const [editingSchedule, setEditingSchedule] = useState<OrderSchedule | null>(null);
   const [formData, setFormData] = useState({
     is_weekend_enabled: false,
     max_orders_per_day: 100,
@@ -100,13 +101,13 @@ const ScheduleManagement = () => {
     setEditingSchedule(null);
   };
 
-  const handleEdit = (schedule: any) => {
+  const handleEdit = (schedule: OrderSchedule) => {
     setEditingSchedule(schedule);
     setFormData({
-      is_weekend_enabled: schedule.is_weekend_enabled,
-      max_orders_per_day: schedule.max_orders_per_day,
-      order_start_time: schedule.order_start_time,
-      order_end_time: schedule.order_end_time,
+      is_weekend_enabled: schedule.is_weekend_enabled || false,
+      max_orders_per_day: schedule.max_orders_per_day || 100,
+      order_start_time: schedule.order_start_time || '12:00',
+      order_end_time: schedule.order_end_time || '17:00',
     });
     setIsDialogOpen(true);
   };
@@ -150,8 +151,8 @@ const ScheduleManagement = () => {
           <div className="mb-4">
             <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
               <DialogTrigger asChild>
-                <Button>
-                  {editingSchedule ? 'Edit Jadwal' : 'Tambah Jadwal'}
+                <Button onClick={resetForm}>
+                  Tambah Jadwal
                 </Button>
               </DialogTrigger>
               <DialogContent>
@@ -223,22 +224,27 @@ const ScheduleManagement = () => {
               {schedules.map((schedule) => (
                 <Card key={schedule.id}>
                   <CardHeader>
-                    <CardTitle>Jadwal #{schedule.id}</CardTitle>
+                    <CardTitle>Jadwal #{schedule.id.slice(0, 8)}</CardTitle>
                     <CardDescription>
-                      Maks: {schedule.max_orders_per_day} pesanan, Akhir pekan:{' '}
+                      Maks: {schedule.max_orders_per_day || 'Unlimited'} pesanan, Akhir pekan:{' '}
                       {schedule.is_weekend_enabled ? 'Aktif' : 'Tidak Aktif'}
                     </CardDescription>
                   </CardHeader>
-                  <CardContent className="flex justify-end">
+                  <CardContent className="flex justify-end space-x-2">
                     <Button variant="secondary" size="sm" onClick={() => handleEdit(schedule)}>
                       Edit
                     </Button>
-                    <Button variant="destructive" size="sm" onClick={() => handleDelete(schedule.id)} className="ml-2">
+                    <Button variant="destructive" size="sm" onClick={() => handleDelete(schedule.id)}>
                       Hapus
                     </Button>
                   </CardContent>
                 </Card>
               ))}
+              {schedules.length === 0 && (
+                <div className="text-center py-8">
+                  <p className="text-gray-500">Belum ada jadwal yang dibuat</p>
+                </div>
+              )}
             </div>
           )}
         </CardContent>

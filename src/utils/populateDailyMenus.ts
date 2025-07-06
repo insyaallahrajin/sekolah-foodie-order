@@ -38,14 +38,36 @@ export const populateDailyMenus = async () => {
       }
     }
 
+    // Check if daily menus already exist for these dates
+    const { data: existingMenus, error: checkError } = await supabase
+      .from('daily_menus')
+      .select('menu_date, food_item_id')
+      .in('menu_date', dates);
+
+    if (checkError) throw checkError;
+
+    // Filter out existing combinations
+    const existingCombinations = new Set(
+      existingMenus?.map(menu => `${menu.menu_date}-${menu.food_item_id}`) || []
+    );
+
+    const newMenus = dailyMenus.filter(menu => 
+      !existingCombinations.has(`${menu.menu_date}-${menu.food_item_id}`)
+    );
+
+    if (newMenus.length === 0) {
+      console.log('All daily menus already exist for the next 7 days');
+      return;
+    }
+
     // Insert daily menus
     const { error: insertError } = await supabase
       .from('daily_menus')
-      .insert(dailyMenus);
+      .insert(newMenus);
 
     if (insertError) throw insertError;
 
-    console.log(`Successfully created ${dailyMenus.length} daily menu items`);
+    console.log(`Successfully created ${newMenus.length} daily menu items`);
     
   } catch (error) {
     console.error('Error populating daily menus:', error);
